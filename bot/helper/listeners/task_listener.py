@@ -38,12 +38,14 @@ from ..mirror_leech_utils.gdrive_utils.upload import GoogleDriveUpload
 from ..mirror_leech_utils.rclone_utils.transfer import RcloneTransferHelper
 from ..mirror_leech_utils.upload_utils.buzzheavier_uploader import BuzzHeavierUploader
 from ..mirror_leech_utils.upload_utils.gofile_uploader import GoFileUploader
+from ..mirror_leech_utils.upload_utils.gotohp_uploader import GoToHPUploader
 from ..mirror_leech_utils.status_utils.gdrive_status import GoogleDriveStatus
 from ..mirror_leech_utils.status_utils.queue_status import QueueStatus
 from ..mirror_leech_utils.status_utils.rclone_status import RcloneStatus
 from ..mirror_leech_utils.status_utils.telegram_status import TelegramStatus
 from ..mirror_leech_utils.status_utils.buzzheavier_status import BuzzHeavierStatus
 from ..mirror_leech_utils.status_utils.gofile_status import GoFileStatus
+from ..mirror_leech_utils.status_utils.gotohp_status import GoToHPStatus
 from ..mirror_leech_utils.upload_utils.telegram_uploader import TelegramUploader
 from ..telegram_helper.button_build import ButtonMaker
 from ..telegram_helper.message_utils import (
@@ -325,6 +327,16 @@ class TaskListener(TaskConfig):
                 gf.upload(),
             )
             del gf
+        elif self.is_gotohp:
+            LOGGER.info(f"Google Photos Upload Name: {self.name}")
+            gp = GoToHPUploader(self, up_path)
+            async with task_dict_lock:
+                task_dict[self.mid] = GoToHPStatus(self, gp, gid, "up")
+            await gather(
+                update_status_message(self.message.chat.id),
+                gp.upload(),
+            )
+            del gp
         elif is_gdrive_id(self.up_dest):
             LOGGER.info(f"Gdrive Upload Name: {self.name}")
             drive = GoogleDriveUpload(self, up_path)
@@ -380,7 +392,11 @@ class TaskListener(TaskConfig):
             if mime_type == "Folder":
                 msg += f"\n<b>SubFolders: </b>{folders}"
                 msg += f"\n<b>Files: </b>{files}"
-            if self.is_buzzheavier:
+            if self.is_gotohp:
+                buttons = ButtonMaker()
+                buttons.url_button("📸 Google Photos", "https://photos.google.com")
+                button = buttons.build_menu()
+            elif self.is_buzzheavier:
                 buttons = ButtonMaker()
                 buttons.url_button("☁️ Cloud Link", link)
                 button = buttons.build_menu()

@@ -9,3 +9,9 @@ aria2c --allow-overwrite=true --auto-file-renaming=true --bt-enable-lpd=true --b
        --summary-interval=0 --max-upload-limit=1K
 qbittorrent-nox -d --profile="$(pwd)"
 sabnzbdplus -f sabnzbd/SABnzbd.ini -s :::8070 -b 0 -d -c -l 0 --console
+
+if ! command -v gotohp-cli &> /dev/null && [ ! -f "./gotohp-cli" ]; then
+    (curl -sL -o /usr/local/bin/gotohp-cli https://github.com/xob0t/gotohp/releases/latest/download/gotohp-cli_amd64 || \
+     wget -qO /usr/local/bin/gotohp-cli https://github.com/xob0t/gotohp/releases/latest/download/gotohp-cli_amd64) 2>/dev/null && \
+     chmod +x /usr/local/bin/gotohp-cli || true
+fi

@@ -20,6 +20,10 @@ from ..core.config_manager import Config
 from ..core.telegram_manager import TgClient
 from ..helper.ext_utils.db_handler import database
 from ..helper.ext_utils.media_utils import create_thumb
+from ..helper.mirror_leech_utils.upload_utils.gotohp_helper import (
+    add_gotohp_credential,
+    GOTOHP_RISK_WARNING,
+)
 from ..helper.telegram_helper.button_build import ButtonMaker
 from ..helper.ext_utils.help_messages import user_settings_text
 from ..helper.ext_utils.bot_utils import (
@@ -46,7 +50,11 @@ leech_options = [
 ]
 rclone_options = ["RCLONE_CONFIG", "RCLONE_PATH", "RCLONE_FLAGS"]
 gdrive_options = ["TOKEN_PICKLE", "GDRIVE_ID", "INDEX_URL"]
-uploaders_options = ["BUZZHEAVIER_ACCOUNT_ID", "BUZZHEAVIER_FOLDER_ID"]
+uploaders_options = [
+    "BUZZHEAVIER_ACCOUNT_ID",
+    "BUZZHEAVIER_FOLDER_ID",
+    "GOTOHP_CONFIG",
+]
 
 
 async def get_user_settings(from_user, stype="main"):
@@ -271,11 +279,15 @@ Gdrive ID is <code>{gdrive_id}</code>
 Index URL is <code>{index}</code>
 Stop Duplicate is <b>{sd_msg}</b>"""
     elif stype == "uploaders":
+        gotohp_conf = f"gotohp/{user_id}.config"
         buttons.data_button(
             "Buzzheavier Account ID", f"userset {user_id} menu BUZZHEAVIER_ACCOUNT_ID"
         )
         buttons.data_button(
             "Buzzheavier Folder ID", f"userset {user_id} menu BUZZHEAVIER_FOLDER_ID"
+        )
+        buttons.data_button(
+            "Google Photos (gotohp)", f"userset {user_id} menu GOTOHP_CONFIG"
         )
         buttons.data_button("Back", f"userset {user_id} back")
         buttons.data_button("Close", f"userset {user_id} close")
@@ -287,9 +299,11 @@ Stop Duplicate is <b>{sd_msg}</b>"""
             bh_fol = user_dict["BUZZHEAVIER_FOLDER_ID"]
         else:
             bh_fol = "None"
+        gp_msg = "Exists" if await aiopath.exists(gotohp_conf) else "Not Exists"
         text = f"""<u>Uploaders Settings for {name}</u>
 Buzzheavier Account ID: {bh_acc}
-Buzzheavier Folder ID: {bh_fol}"""
+Buzzheavier Folder ID: {bh_fol}
+Google Photos Config: <b>{gp_msg}</b>"""
     else:
         buttons.data_button("Leech", f"userset {user_id} leech")
         buttons.data_button("Rclone", f"userset {user_id} rclone")
@@ -433,6 +447,11 @@ async def add_file(_, message, ftype):
         await makedirs(tpath, exist_ok=True)
         des_dir = f"{tpath}{user_id}.pickle"
         await message.download(file_name=des_dir)
+    elif ftype == "GOTOHP_CONFIG":
+        gpath = f"{getcwd()}/gotohp/"
+        await makedirs(gpath, exist_ok=True)
+        des_dir = f"{gpath}{user_id}.config"
+        await message.download(file_name=des_dir)
     update_user_ldata(user_id, ftype, des_dir)
     await delete_message(message)
     await database.update_user_doc(user_id, ftype, des_dir)
@@ -497,6 +516,10 @@ async def set_option(_, message, option):
             value.append(x.strip().lower())
     elif option == "INDEX_URL":
         value = value
+    elif option == "GOTOHP_CONFIG":
+        await add_gotohp_credential(user_id, value)
+        await delete_message(message)
+        return
     elif option in [
         "UPLOAD_PATHS",
         "FFMPEG_CMDS",
@@ -521,14 +544,19 @@ async def get_menu(option, message, user_id):
     handler_dict[user_id] = False
     user_dict = user_data.get(user_id, {})
     buttons = ButtonMaker()
-    if option in ["THUMBNAIL", "RCLONE_CONFIG", "TOKEN_PICKLE"]:
-        key = "file"
+    if option == "GOTOHP_CONFIG":
+        buttons.data_button("Set Credential", f"userset {user_id} set {option}")
+        buttons.data_button("Send Config File", f"userset {user_id} file {option}")
+        buttons.data_button("Remove", f"userset {user_id} remove {option}")
     else:
-        key = "set"
-    buttons.data_button("Set", f"userset {user_id} {key} {option}")
-    if option in user_dict and key != "file":
-        buttons.data_button("Reset", f"userset {user_id} reset {option}")
-    buttons.data_button("Remove", f"userset {user_id} remove {option}")
+        if option in ["THUMBNAIL", "RCLONE_CONFIG", "TOKEN_PICKLE"]:
+            key = "file"
+        else:
+            key = "set"
+        buttons.data_button("Set", f"userset {user_id} {key} {option}")
+        if option in user_dict and key != "file":
+            buttons.data_button("Reset", f"userset {user_id} reset {option}")
+        buttons.data_button("Remove", f"userset {user_id} remove {option}")
     if option == "FFMPEG_CMDS":
         ffc = None
         if user_dict.get("FFMPEG_CMDS", False):
@@ -670,6 +698,7 @@ async def edit_user_settings(client, query):
     thumb_path = f"thumbnails/{user_id}.jpg"
     rclone_conf = f"rclone/{user_id}.conf"
     token_pickle = f"tokens/{user_id}.pickle"
+    gotohp_conf = f"gotohp/{user_id}.config"
     user_dict = user_data.get(user_id, {})
     if user_id != int(data[1]):
         await query.answer("Not Yours!", show_alert=True)
@@ -699,8 +728,12 @@ async def edit_user_settings(client, query):
             text = "Send a photo to save it as custom thumbnail. Timeout: 60 sec"
         elif data[3] == "RCLONE_CONFIG":
             text = "Send rclone.conf. Timeout: 60 sec"
-        else:
+        elif data[3] == "TOKEN_PICKLE":
             text = "Send token.pickle. Timeout: 60 sec"
+        elif data[3] == "GOTOHP_CONFIG":
+            text = f"{GOTOHP_RISK_WARNING}\n\nSend gotohp.config or credential text file. Timeout: 60 sec"
+        else:
+            text = "Send file. Timeout: 60 sec"
         buttons.data_button("Back", f"userset {user_id} setevent")
         buttons.data_button("Close", f"userset {user_id} close")
         await edit_message(message, text, buttons.build_menu(2))
@@ -746,16 +779,19 @@ async def edit_user_settings(client, query):
         await get_menu(data[3], message, user_id)
     elif data[2] == "remove":
         await query.answer("Removed!", show_alert=True)
-        if data[3] in ["THUMBNAIL", "RCLONE_CONFIG", "TOKEN_PICKLE"]:
+        if data[3] in ["THUMBNAIL", "RCLONE_CONFIG", "TOKEN_PICKLE", "GOTOHP_CONFIG"]:
             if data[3] == "THUMBNAIL":
                 fpath = thumb_path
             elif data[3] == "RCLONE_CONFIG":
                 fpath = rclone_conf
-            else:
+            elif data[3] == "TOKEN_PICKLE":
                 fpath = token_pickle
+            else:
+                fpath = gotohp_conf
             if await aiopath.exists(fpath):
                 await remove(fpath)
-            del user_dict[data[3]]
+            if data[3] in user_dict:
+                del user_dict[data[3]]
             await database.update_user_doc(user_id, data[3])
         else:
             update_user_ldata(user_id, data[3], "")
@@ -772,6 +808,7 @@ async def edit_user_settings(client, query):
                     "THUMBNAIL",
                     "RCLONE_CONFIG",
                     "TOKEN_PICKLE",
+                    "GOTOHP_CONFIG",
                 ]:
                     del user_dict[k]
             await update_user_settings(query)

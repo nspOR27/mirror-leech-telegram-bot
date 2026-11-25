@@ -34,6 +34,9 @@ from .mirror_leech_utils.gdrive_utils.list import GoogleDriveList
 from .mirror_leech_utils.rclone_utils.list import RcloneList
 from .mirror_leech_utils.status_utils.sevenz_status import SevenZStatus
 from .mirror_leech_utils.status_utils.ffmpeg_status import FFmpegStatus
+from .mirror_leech_utils.upload_utils.gotohp_helper import (
+    prompt_gotohp_credentials,
+)
 from .telegram_helper.bot_commands import BotCommands
 from .ext_utils.files_utils import (
     get_base_name,
@@ -104,6 +107,7 @@ class TaskConfig:
         self.is_torbox = False
         self.is_buzzheavier = False
         self.is_gofile = False
+        self.is_gotohp = False
         self.equal_splits = False
         self.user_transmission = False
         self.hybrid_leech = False
@@ -306,8 +310,33 @@ class TaskConfig:
             self.is_buzzheavier = True
         elif default_upload == "gf" or self.up_dest == "gf":
             self.is_gofile = True
+        elif (
+            default_upload in ["gp", "photos", "gotohp"]
+            or self.up_dest
+            in [
+                "gp",
+                "photos",
+                "ptotos",
+                "photo",
+                "gotohp",
+                "googlephoto",
+                "googlephotos",
+            ]
+            or self.up_dest.startswith(
+                ("gp:", "photos:", "ptotos:", "photo:", "gotohp:")
+            )
+        ):
+            self.is_gotohp = True
+            await prompt_gotohp_credentials(
+                self.client, self.message, self.user_id
+            )
 
-        if not self.is_leech and not self.is_buzzheavier and not self.is_gofile:
+        if (
+            not self.is_leech
+            and not self.is_buzzheavier
+            and not self.is_gofile
+            and not self.is_gotohp
+        ):
             self.stop_duplicate = (
                 self.user_dict.get("STOP_DUPLICATE")
                 or "STOP_DUPLICATE" not in self.user_dict

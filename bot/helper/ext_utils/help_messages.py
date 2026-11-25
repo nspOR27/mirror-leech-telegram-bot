@@ -96,12 +96,13 @@ Note: Only mb and gb are supported or write in bytes without unit!"""
 
 upload = """<b>Upload Destination</b>: -up
 
-/cmd link -up rc/gd/rcl/gdl/bh/gf (rcl: to select rclone config, remote & path | gdl: To select token.pickle, gdrive id | gf: upload to GoFile) using buttons
-You can directly add the upload path: -up remote:dir/subdir or -up Gdrive_id or -up id/username (telegram) or -up id/username|topic_id (telegram)
+/cmd link -up rc/gd/rcl/gdl/bh/gf/photos (rcl: to select rclone config, remote & path | gdl: To select token.pickle, gdrive id | gf: upload to GoFile | photos: upload to Google Photos via gotohp) using buttons
+You can directly add the upload path: -up remote:dir/subdir or -up Gdrive_id or -up id/username (telegram) or -up id/username|topic_id (telegram) or -up photos
 If DEFAULT_UPLOAD is `rc` then you can pass up: `gd` to upload using gdrive tools to GDRIVE_ID.
 If DEFAULT_UPLOAD is `gd` then you can pass up: `rc` to upload to RCLONE_PATH.
 If DEFAULT_UPLOAD is `bh` or `gf` then you can pass up: `rc` to upload to RCLONE_PATH.
-If DEFAULT_UPLOAD is `gd` then you can pass up: `bh` to upload to BUZZHEAVIER or `gf` to upload to GoFile.
+If DEFAULT_UPLOAD is `gd` then you can pass up: `bh` to upload to BUZZHEAVIER, `gf` to upload to GoFile, or `photos` to upload to Google Photos.
+Google Photos: Pass `-up photos` or `-up gp`. On first use, the bot will warn you of risks and ask for your gotohp credentials to save in your config file.
 GoFile uses GOFILE_API_KEY when configured; otherwise guest upload is used.
 
 If you want to add path or gdrive manually from your config/token (UPLOADED FROM USETTING) add mt: for rclone and mt: before the path/gdrive_id without space.
@@ -478,6 +479,10 @@ Format: {key: value, key: value, key: value}.
 Example: {"cookies": "cookies.txt", "proxy": "http://proxy:8080", "image-range": "1-50", "extractor": {"pixiv": {"username": "user", "password": "pass"}}}
 Check gallery-dl configuration options from this <a href='https://github.com/mikf/gallery-dl/blob/master/docs/configuration.rst'>FILE</a>.""",
     "CLONE_DUMP_CHATS": "Send List/Int/Str Chat_id/username|thread_id. Example: -100xxxx555|5 or @dumpchat|8 or @mltb_dump or pm or List like: [-100xxx885552|6, '@username', 65585541254, 'pm']",
+    "GOTOHP_CONFIG": """⚠️ <b>Google Photos (gotohp) Setup & Warning</b>:
+• <b>Risk of Account Ban:</b> Google detects Pixel spoofing. Use at your own risk, preferably with a burner account!
+• <b>ToS Violation:</b> Evading Google One storage limits violates Google ToS.
+Reply with your credential string (e.g. <code>oauth_token=...</code> or <code>androidId=...</code>) or upload a credential text file. Timeout: 60 sec""",
 }
 
 

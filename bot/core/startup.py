@@ -68,7 +68,7 @@ async def load_settings():
     if not Config.DATABASE_URL:
         return
 
-    for p in ["thumbnails", "tokens", "rclone"]:
+    for p in ["thumbnails", "tokens", "rclone", "gotohp"]:
         if await aiopath.exists(p):
             await rmtree(p, ignore_errors=True)
 
@@ -135,7 +135,7 @@ async def load_settings():
             await f.write(value)
 
     if await database.db.users.find_one():
-        for p in ["thumbnails", "tokens", "rclone"]:
+        for p in ["thumbnails", "tokens", "rclone", "gotohp"]:
             if not await aiopath.exists(p):
                 await makedirs(p)
         rows = database.db.users.find({})
@@ -145,6 +145,7 @@ async def load_settings():
             thumb_path = f"thumbnails/{uid}.jpg"
             rclone_config_path = f"rclone/{uid}.conf"
             token_path = f"tokens/{uid}.pickle"
+            gotohp_config_path = f"gotohp/{uid}.config"
             if row.get("THUMBNAIL"):
                 async with aiopen(thumb_path, "wb+") as f:
                     await f.write(row["THUMBNAIL"])
@@ -157,6 +158,10 @@ async def load_settings():
                 async with aiopen(token_path, "wb+") as f:
                     await f.write(row["TOKEN_PICKLE"])
                 row["TOKEN_PICKLE"] = token_path
+            if row.get("GOTOHP_CONFIG"):
+                async with aiopen(gotohp_config_path, "wb+") as f:
+                    await f.write(row["GOTOHP_CONFIG"])
+                row["GOTOHP_CONFIG"] = gotohp_config_path
             user_data[uid] = row
         LOGGER.info("Users data has been imported from Database")
 
